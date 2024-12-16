@@ -1,5 +1,4 @@
 from decimal import getcontext
-
 import numpy as np
 import sympy as sp
 from scipy.optimize import fsolve
@@ -107,8 +106,8 @@ def solve_ode(f, t0, y0, t_end, h, known_w_values=None, init_method=None):
     h = float(h)
     t_end = float(t_end)
 
-    # 创建时间点数组
-    t_values = np.arange(t0, t_end, h)
+    # 创建时间点数组，确保包含 t_end
+    t_values = np.linspace(t0, t_end, num=int((t_end - t0) / h) + 1)
     n_steps = len(t_values)
 
     # 将 y_values 数组初始化为 float 类型的数组
@@ -152,6 +151,9 @@ def solve_ode(f, t0, y0, t_end, h, known_w_values=None, init_method=None):
                 9 * f(t_values[n - 3], y_values[n - 3])
         )
 
+        # 打印预测步骤的 y_pred 值
+        print(f"Prediction step for t = {t_values[n + 1]:<10.2f}: y_pred = {y_pred:<10.8f}")
+
         # 修正步骤（使用 Adams-Moulton 方法）
         def implicit_correction(y_next):
             return y_next - y_values[n] - (h / 720) * (
@@ -165,7 +167,11 @@ def solve_ode(f, t0, y0, t_end, h, known_w_values=None, init_method=None):
         # 使用 fsolve 解决隐式方程
         y_values[n + 1] = fsolve(implicit_correction, y_pred)[0]
 
+        # 打印修正后的 y_values[n + 1] 值
+        print(f"Corrector step for t = {t_values[n + 1]:<10.2f}: y_corrected = {y_values[n + 1]:<10.8f}")
+
     return t_values, y_values
+
 
 # 主程序
 def main():
