@@ -1,10 +1,11 @@
+from decimal import getcontext
+
 import numpy as np
-from scipy.optimize import fsolve
-from decimal import Decimal, getcontext
 import sympy as sp
+from scipy.optimize import fsolve
 
 # 设置 decimal 的默认精度（例如设置精度为50位，之后会根据需要调整）
-getcontext().prec = 50
+getcontext().prec = 100
 
 # 用户自定义 ODE 函数
 def get_ode_function():
@@ -154,29 +155,17 @@ def solve_ode(f, t0, y0, t_end, h, known_w_values=None, init_method=None):
         # 修正步骤（使用 Adams-Moulton 方法）
         def implicit_correction(y_next):
             return y_next - y_values[n] - (h / 720) * (
-                    251 * f(t_values[n], y_next) +
-                    646 * f(t_values[n - 1], y_values[n - 1]) -
-                    264 * f(t_values[n - 2], y_values[n - 2]) +
-                    106 * f(t_values[n - 3], y_values[n - 3]) -
-                    19 * f(t_values[n - 4], y_values[n - 4])
+                    251 * f(t_values[n] + h, y_next) +
+                    646 * f(t_values[n], y_values[n]) -
+                    264 * f(t_values[n - 1], y_values[n - 1]) +
+                    106 * f(t_values[n - 2], y_values[n - 2]) -
+                    19 * f(t_values[n - 3], y_values[n - 3])
             )
 
         # 使用 fsolve 解决隐式方程
         y_values[n + 1] = fsolve(implicit_correction, y_pred)[0]
 
     return t_values, y_values
-
-
-# 获取最大的小数位数
-def get_max_decimal_places(known_w_values):
-    """
-    获取已知w值的最大小数位数
-    """
-    if known_w_values is not None and len(known_w_values) > 0:
-        max_decimal_places = max(len(str(val).split('.')[-1]) for val in known_w_values if '.' in str(val))
-        return max_decimal_places
-    return 8  # 默认值为 8 位小数
-
 
 # 主程序
 def main():
@@ -224,10 +213,10 @@ def main():
         print("Invalid choice.")
 
     # 获取最大的小数位数
-    max_decimal_places = get_max_decimal_places(known_w_values)
+    max_decimal_places = 8
 
     # 设置 Decimal 的精度
-    getcontext().prec = max_decimal_places + 5  # 增加一些额外的精度，以便计算时不会丢失精度
+    getcontext().prec = max_decimal_places + 7  # 增加一些额外的精度，以便计算时不会丢失精度
 
     # 求解 ODE
     t_values, y_values = solve_ode(f, t0, y0, t_end, h, known_w_values, init_method)
@@ -237,7 +226,7 @@ def main():
     print(f"{'t':<10} {'y(t)':<10}")
     for t, y in zip(t_values, y_values):
         # 使用 round 保留指定小数位数
-        print(f"{t:<10.2f} {round(y, max_decimal_places):<10.6f}")
+        print(f"{t:<10.2f} {round(y, max_decimal_places):<10.8f}")
 
 
 if __name__ == "__main__":
