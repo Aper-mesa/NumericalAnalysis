@@ -3,7 +3,7 @@ import numpy as np
 import sympy as sp
 from scipy.optimize import fsolve
 
-# 设置 decimal 的默认精度（例如设置精度为50位，之后会根据需要调整）
+# 设置 Decimal 的默认精度（例如设置精度为100位，之后会根据需要调整）
 getcontext().prec = 100
 
 
@@ -50,16 +50,62 @@ def get_ode_function():
 
     elif choice == '5':
         print("You chose to input a customized function.")
-        print("You can use the following mathematical functions:")
-        print("  - Trigonometric functions: sin(y), cos(y), tan(y), etc.")
+        print("You can use the following mathematical functions and operators:")
+        print("\nAllowed Functions:")
+        print("  - Trigonometric functions: sin(y), cos(y), tan(y), cot(y), sec(y), csc(y)")
+        print("  - Inverse trigonometric functions: asin(y), acos(y), atan(y)")
+        print("  - Hyperbolic functions: sinh(y), cosh(y), tanh(y)")
         print("  - Exponential and logarithmic functions: exp(y), log(y) [natural log], ln(y)")
-        print("  - Power functions: y**2, t**3, etc.")
-        print("  - Other functions: sqrt(y), etc.")
-        print("Use 't' and 'y' as variables. For division, use '/' (e.g., y/t).")
-        print("Examples:")
-        print("  - t*sin(y) + cos(t)")
-        print("  - y/t + log(y)")
-        print("  - exp(t) - y**2")
+        print("  - Power and root functions: sqrt(y), y**n, t**n")
+        print("  - Absolute value: abs(y)")
+        print("  - Mathematical constants: pi, e")
+        print("\nAllowed Operators:")
+        print("  - Addition: +")
+        print("  - Subtraction: -")
+        print("  - Multiplication: *")
+        print("  - Division: /")
+        print("  - Exponentiation: **")
+        print("  - Parentheses: ( )")
+        print("\nAllowed Variables:")
+        print("  - t (independent variable)")
+        print("  - y (dependent variable)")
+        print("\nExamples of valid expressions:")
+        print("  1. t*sin(y) + cos(t)")
+        print("  2. y/t + log(y)")
+        print("  3. exp(t) - y**2")
+        print("  4. (t**2 + y**3)/(1 + y)")
+        print("  5. sinh(t) * cosh(y) - tan(y)")
+        print("  6. atan(y) + sqrt(t)")
+        print("  7. y * exp(-t) + log(t + y)")
+        print("  8. abs(y) / (1 + t**2)")
+        print("  9. (y**2 + t**2)**0.5")
+        print("  10. (exp(y) - y) / t")
+        print("  11. e**(-t) * sin(y)")
+        print("  12. pi * y + t**2")
+
+        # 定义允许的函数和符号，移除 log10
+        allowed_functions = {
+            'sin': sp.sin,
+            'cos': sp.cos,
+            'tan': sp.tan,
+            'cot': sp.cot,
+            'sec': sp.sec,
+            'csc': sp.csc,
+            'asin': sp.asin,
+            'acos': sp.acos,
+            'atan': sp.atan,
+            'sinh': sp.sinh,
+            'cosh': sp.cosh,
+            'tanh': sp.tanh,
+            'exp': sp.exp,
+            'log': sp.log,  # 自然对数
+            'ln': sp.log,  # ln 作为自然对数的别名
+            'sqrt': sp.sqrt,
+            'abs': sp.Abs,
+            'pi': sp.pi,
+            'e': sp.E,
+        }
+        allowed_symbols = {'t', 'y', 'pi', 'e'}
 
         while True:
             expr = input("Please input your customized expression for dy/dt: ").strip()
@@ -69,34 +115,19 @@ def get_ode_function():
                 print("Exiting function input.")
                 return None
 
-            # 使用 sympy 来解析用户输入的表达式
-            t, y = sp.symbols('t y')
-
-            # 定义允许的函数和符号
-            allowed_functions = {
-                'sin': sp.sin,
-                'cos': sp.cos,
-                'tan': sp.tan,
-                'exp': sp.exp,
-                'log': sp.log,  # 自然对数
-                'sqrt': sp.sqrt,
-                'Abs': sp.Abs,
-                'abs': sp.Abs,
-                'ln': sp.log,
-            }
-            allowed_symbols = {'t', 'y'}
-
             try:
-                # 使用 sympy 解析用户输入的公式
+                # 使用 sympy 解析用户输入的公式，限制在 allowed_functions 中
                 ode_expr = sp.sympify(expr, locals=allowed_functions)
 
                 # 检查是否只包含允许的符号
                 symbols_in_expr = ode_expr.free_symbols
-                if not symbols_in_expr.issubset({t, y}):
-                    raise ValueError(f"Only 't' and 'y' variables are allowed. Found symbols: {symbols_in_expr}")
+                allowed_free_symbols = {sp.Symbol('t'), sp.Symbol('y'), sp.Symbol('pi'), sp.Symbol('e')}
+                if not symbols_in_expr.issubset(allowed_free_symbols):
+                    raise ValueError(
+                        f"Only 't', 'y', 'pi', and 'e' variables/constants are allowed. Found symbols: {symbols_in_expr}")
 
                 # 转换为 Python 函数以便数值计算
-                ode_func = sp.lambdify((t, y), ode_expr, modules=["numpy"])
+                ode_func = sp.lambdify((sp.Symbol('t'), sp.Symbol('y')), ode_expr, modules=["numpy"])
 
                 # 测试函数是否可以正常计算
                 test_val = ode_func(1, 1)
@@ -106,7 +137,8 @@ def get_ode_function():
                 return ode_func
 
             except sp.SympifyError:
-                print("Error: The expression could not be parsed. Please check the syntax.")
+                print(
+                    "Error: The expression could not be parsed. Please check the syntax and use only allowed functions.")
             except ValueError as ve:
                 print(f"Error: {ve}")
             except Exception as e:
@@ -114,20 +146,12 @@ def get_ode_function():
 
             print("Please try entering the expression again or type 'exit' to cancel.")
 
-    else:
-        print("Invalid selection. By default use dy/dt = -2y.")
 
-        def f(t, y):
-            return -2 * y  # 默认选择 dy/dt = -2y
-
-        return f
-
-
-# 以下是原始代码的其他部分，未作修改
 # 求解常微分方程（ODE）的数值解
 def solve_ode(f, t0, y0, t_end, h, known_w_values=None, init_method=None):
     """
-    使用龙格-库塔-费尔伯格方法（Runge-Kutta-Fehlberg method）求解常微分方程。
+    使用 Runge-Kutta-Fehlberg 方法 (RKF45) 初始化前三步，然后使用 Predictor-Corrector 方法继续求解。
+
     参数：
     f : function
         常微分方程的右侧函数 f(t, y)
@@ -140,9 +164,9 @@ def solve_ode(f, t0, y0, t_end, h, known_w_values=None, init_method=None):
     h : float
         步长
     known_w_values : list of floats, optional
-        已知的初始条件列表
+        已知的初始条件列表（W1, W2, W3）
     init_method : str, optional
-        选择初始化方法，'Runge-Kutta'
+        选择初始化方法，'Runge-Kutta-Fehlberg'
     返回：
     t_values : numpy.ndarray
         时间点数组
@@ -156,75 +180,85 @@ def solve_ode(f, t0, y0, t_end, h, known_w_values=None, init_method=None):
     h = float(h)
     t_end = float(t_end)
 
+    # 计算步数
+    n_steps = int((t_end - t0) / h) + 1
+
     # 创建时间点数组，确保包含 t_end
-    t_values = np.linspace(t0, t_end, num=int((t_end - t0) / h) + 1)
-    n_steps = len(t_values)
+    t_values = np.linspace(t0, t_end, num=n_steps)
+    y_values = np.zeros(n_steps)
+    y_values[0] = y0
 
-    # 将 y_values 数组初始化为 float 类型的数组
-    y_values = np.array([0.0] * n_steps)
-
-    # 如果有已知的 w 值，使用它们来初始化 y 值
-    if known_w_values is not None and len(known_w_values) > 0:
-        # 从已知的 w 值开始
-        for i in range(len(known_w_values)):
-            y_values[i] = known_w_values[i]
+    # 初始化前三步
+    if known_w_values is not None and len(known_w_values) >= 3:
+        # 使用已知的 W 值进行初始化 (W1, W2, W3)
+        for i in range(3):
+            if i + 1 < n_steps:
+                y_values[i + 1] = known_w_values[i]
     else:
-        # 否则，根据初始化方法进行初始化
-        y_values[0] = y0
+        # 使用 Runge-Kutta-Fehlberg 方法初始化前三步
+        for i in range(1, 4):
+            if i >= n_steps:
+                break  # 防止索引超出范围
+            t_current = t_values[i - 1]
+            y_current = y_values[i - 1]
 
-        if init_method == 'Runge-Kutta':
-            # 使用龙格-库塔-费尔伯格法（Runge-Kutta-Fehlberg Method）来计算初值
-            for i in range(1, 4):
-                t = t_values[i - 1]
-                y = y_values[i - 1]
+            # 计算 RKF45 的 k1 到 k6
+            k1 = h * f(t_current, y_current)
+            k2 = h * f(t_current + h / 4, y_current + (1 / 4) * k1)
+            k3 = h * f(t_current + 3 * h / 8, y_current + (3 / 32) * k1 + (9 / 32) * k2)
+            k4 = h * f(t_current + 12 * h / 13,
+                       y_current + (1932 / 2197) * k1 - (7200 / 2197) * k2 + (7296 / 2197) * k3)
+            k5 = h * f(t_current + h,
+                       y_current + (439 / 216) * k1 - (8 / 21) * k2 + (3680 / 513) * k3 - (845 / 4104) * k4)
+            k6 = h * f(t_current + h / 2,
+                       y_current - (8 / 27) * k1 + (2 / 9) * k2 - (3544 / 2565) * k3 + (1859 / 4104) * k4 - (
+                               11 / 40) * k5)
 
-                # 计算 RKF 系数
-                k1 = h * f(t, y)
-                k2 = h * f(t + h / 4, y + (1 / 4) * k1)
-                k3 = h * f(t + 3 * h / 8, y + (3 / 32) * k1 + (9 / 32) * k2)
-                k4 = h * f(t + 12 * h / 13, y + (1932 / 2197) * k1 - (7200 / 2197) * k2 + (7296 / 2197) * k3)
-                k5 = h * f(t + h, y + (439 / 216) * k1 - (8 / 21) * k2 + (3680 / 513) * k3 - (845 / 4104) * k4)
-                k6 = h * f(t + h / 2,
-                           y - (8 / 27) * k1 + (2 / 9) * k2 - (3544 / 2565) * k3 + (1859 / 4104) * k4 - (11 / 40) * k5)
+            # 计算五阶估计值 y_rk5
+            y_rk5 = y_current + (16 * k1 / 135 + 6656 * k3 / 12825 + 28561 * k4 / 56430 - 9 * k5 / 50 + 2 * k6 / 55)
 
-                # 计算预测值和修正值
-                y_rk4 = y + (k1 + 4 * k2 + k3) / 6
-                y_rk5 = y + (k1 + 4 * k2 + k3 + k4 + k5) / 6
+            # 将 y_rk5 赋值给 y_values
+            y_values[i] = y_rk5
 
-                # 将修正后的值赋给 y_values
-                y_values[i] = y_rk4
-
-        else:
-            raise ValueError("Invalid initialization method. Choose 'Runge-Kutta'.")
-
-    # 预测-修正步骤（结合 Adams-Bashforth 和 Adams-Moulton）
+    # 使用 Predictor-Corrector 方法继续求解
     for n in range(3, n_steps - 1):
-        # 预测步骤（使用 Adams-Bashforth 方法）
-        y_pred = y_values[n] + (h / 24) * (
-                55 * f(t_values[n], y_values[n]) -
-                59 * f(t_values[n - 1], y_values[n - 1]) +
-                37 * f(t_values[n - 2], y_values[n - 2]) -
-                9 * f(t_values[n - 3], y_values[n - 3])
+        # 当前步
+        t_n = t_values[n]
+        y_n = y_values[n]
+        t_n_minus_1 = t_values[n - 1]
+        y_n_minus_1 = y_values[n - 1]
+        t_n_minus_2 = t_values[n - 2]
+        y_n_minus_2 = y_values[n - 2]
+        t_n_minus_3 = t_values[n - 3]
+        y_n_minus_3 = y_values[n - 3]
+
+        t_pred = t_n + h
+
+        # 预测步骤（使用 Adams-Bashforth 4步预测）
+        y_pred = y_n + (h / 24) * (
+                55 * f(t_n, y_n) -
+                59 * f(t_n_minus_1, y_n_minus_1) +
+                37 * f(t_n_minus_2, y_n_minus_2) -
+                9 * f(t_n_minus_3, y_n_minus_3)
         )
+        print(f"Prediction step for t = {t_pred:<10.2f}: y_pred = {y_pred:<15.8f}")
 
-        # 打印预测步骤的 y_pred 值
-        print(f"Prediction step for t = {t_values[n + 1]:<10.2f}: y_pred = {y_pred:<10.8f}")
-
-        # 修正步骤（使用 Adams-Moulton 方法）
+        # 修正步骤（使用 Adams-Moulton 4步修正）
         def implicit_correction(y_next):
-            return y_next - y_values[n] - (h / 720) * (
-                    251 * f(t_values[n] + h, y_next) +
-                    646 * f(t_values[n], y_values[n]) -
-                    264 * f(t_values[n - 1], y_values[n - 1]) +
-                    106 * f(t_values[n - 2], y_values[n - 2]) -
-                    19 * f(t_values[n - 3], y_values[n - 3])
+            return y_next - y_n - (h / 720) * (
+                    251 * f(t_pred, y_next) +
+                    646 * f(t_n, y_n) -
+                    264 * f(t_n_minus_1, y_n_minus_1) +
+                    106 * f(t_n_minus_2, y_n_minus_2) -
+                    19 * f(t_n_minus_3, y_n_minus_3)
             )
 
         # 使用 fsolve 解决隐式方程
-        y_values[n + 1] = fsolve(implicit_correction, y_pred)[0]
+        y_corrected = fsolve(implicit_correction, y_pred)[0]
+        print(f"Corrector step for t = {t_pred:<10.2f}: y_corrected = {y_corrected:<15.8f}")
 
-        # 打印修正后的 y_values[n + 1] 值
-        print(f"Corrector step for t = {t_values[n + 1]:<10.2f}: y_corrected = {y_values[n + 1]:<10.8f}")
+        # 更新 y_values
+        y_values[n + 1] = y_corrected
 
     return t_values, y_values
 
@@ -243,30 +277,30 @@ def main():
         y0 = float(input("Please input initial condition y0: "))
         t_end = float(input("Please input end time t_end: "))
         h = float(input("Please input step length h: "))
-    except ValueError:
-        print("Invalid input for numerical parameters. Please enter valid numbers.")
+        if h <= 0:
+            raise ValueError("Step length h must be positive.")
+    except ValueError as ve:
+        print(f"Invalid input for numerical parameters: {ve}")
         return
 
-    # 用户输入已知的 w 值
+    # 用户输入已知的 W 值
     _w = input("W values already known? (y/n): ").strip().lower()
     known_w_values = []
 
     if _w == 'y':
         try:
-            # 如果用户选择有已知的 W 值，直接输入它们
-            known_w_values.append(y0)  # W0 = y0，作为初始值
-            for i in range(3):
-                w = float(input(f"Please input the value of w{i + 1}: "))
+            # 如果用户选择有已知的 W 值，直接输入它们 (仅输入 W1, W2, W3)
+            print("Please input three known W values (W1, W2, W3):")
+            for i in range(1, 4):
+                w = float(input(f"Please input the value of W{i}: "))
                 known_w_values.append(w)
-            # 由于已知W值，跳过初始化方法的选择
-            init_method = None
         except ValueError:
             print("Invalid input for W values. Please enter valid numbers.")
             return
 
     elif _w == 'n':
-        # 如果没有已知的 W 值，直接使用 RKF 方法
-        init_method = 'Runge-Kutta'
+        # 如果没有已知的 W 值，直接使用 RKF 方法初始化
+        init_method = 'Runge-Kutta-Fehlberg'
     else:
         print("Invalid choice for W values. Please enter 'y' or 'n'.")
         return
@@ -279,17 +313,25 @@ def main():
 
     # 求解 ODE
     try:
-        t_values, y_values = solve_ode(f, t0, y0, t_end, h, known_w_values, init_method)
+        # 如果用户选择有已知的 W 值，init_method 设为 None
+        if _w == 'y':
+            # 确保已输入至少三个 W 值
+            if len(known_w_values) < 3:
+                print("At least three W values are required when 'y' is selected.")
+                return
+            t_values, y_values = solve_ode(f, t0, y0, t_end, h, known_w_values=known_w_values, init_method=None)
+        else:
+            t_values, y_values = solve_ode(f, t0, y0, t_end, h, known_w_values=None, init_method='Runge-Kutta-Fehlberg')
     except Exception as e:
         print(f"An error occurred while solving the ODE: {e}")
         return
 
     # 输出结果
     print("\nNumerical solution result:")
-    print(f"{'t':<10} {'y(t)':<10}")
+    print(f"{'t':<15} {'y(t)':<15}")
     for t, y in zip(t_values, y_values):
         # 使用 round 保留指定小数位数
-        print(f"{t:<10.2f} {round(y, max_decimal_places):<10.8f}")
+        print(f"{t:<15.8f} {y:<15.8f}")
 
 
 if __name__ == "__main__":
