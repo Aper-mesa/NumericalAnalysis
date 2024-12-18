@@ -115,21 +115,35 @@ def solve_ode(f, t0, y0, t_end, h, known_w_values=None, init_method=None):
 
             # 计算 RKF45 的 k1 到 k6
             k1 = h * f(t_current, y_current)
-            k2 = h * f(t_current + h / 4, y_current + (1 / 4) * k1)
-            k3 = h * f(t_current + 3 * h / 8, y_current + (3 / 32) * k1 + (9 / 32) * k2)
-            k4 = h * f(t_current + 12 * h / 13,
-                       y_current + (1932 / 2197) * k1 - (7200 / 2197) * k2 + (7296 / 2197) * k3)
-            k5 = h * f(t_current + h,
-                       y_current + (439 / 216) * k1 - (8 / 21) * k2 + (3680 / 513) * k3 - (845 / 4104) * k4)
+            k2 = h * f(t_current + h / 4, y_current + k1 / 4)
+            k3 = h * f(t_current + 3 * h / 8, y_current + 3 * k1 / 32 + 9 * k2 / 32)
+            k4 = h * f(t_current + 12 * h / 13, y_current + 1932 * k1 / 2197 - 7200 * k2 / 2197 + 7296 * k3 / 2197)
+            k5 = h * f(t_current + h, y_current + 439 * k1 / 216 - 8 * k2 + 3680 * k3 / 513 - 845 * k4 / 4104)
             k6 = h * f(t_current + h / 2,
-                       y_current - (8 / 27) * k1 + (2 / 9) * k2 - (3544 / 2565) * k3 + (1859 / 4104) * k4 - (
-                               11 / 40) * k5)
+                       y_current - 8 * k1 / 27 + 2 * k2 - 3544 * k3 / 2565 + 1859 * k4 / 4104 - 11 * k5 / 40)
 
-            # 计算五阶估计值 y_rk5
+            # 五阶估计值 y_rk5
             y_rk5 = y_current + (16 * k1 / 135 + 6656 * k3 / 12825 + 28561 * k4 / 56430 - 9 * k5 / 50 + 2 * k6 / 55)
 
-            # 将 y_rk5 赋值给 y_values
-            y_values[i] = y_rk5
+            # 计算误差估计
+            y_rk4 = y_current + (25 * k1 / 216 + 1408 * k3 / 2565 + 2197 * k4 / 4104 - k5 / 5)
+            local_error = abs(y_rk5 - y_rk4)
+
+            # 容忍度和误差检查
+            tol = 1e-6  # 调整容忍度到合适的数值
+            R = local_error / tol
+
+            # 判断误差是否接受
+            if R <= 1.0:
+                y_values[i] = y_rk5  # 接受当前步长的结果
+                t_values[i] = t_current + h
+            else:
+                h = h * max(0.1, min(0.5, 0.84 * R ** (-0.25)))  # 缩小步长重试
+                continue
+
+            # 步长更新逻辑
+            delta = 0.84 * R ** (-0.25)
+            h = h * max(0.5, min(2.0, delta))
 
     for n in range(3, n_steps - 1):
         # 当前步
