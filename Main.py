@@ -263,8 +263,19 @@ def solve_ode(f, t0, y0, t_end, h, known_w_values=None, init_method=None):
     return t_values, y_values
 
 
-# 主程序
 def main():
+    # 询问用户需要的有效数字位数
+    try:
+        significant_digits = int(input("Please enter the number of significant digits required: "))
+        if significant_digits <= 0:
+            raise ValueError("Significant digits must be a positive integer.")
+    except ValueError as ve:
+        print(f"Invalid input for significant digits: {ve}")
+        return
+
+    # 设置 Decimal 的精度
+    getcontext().prec = significant_digits + 2  # +2 是为了避免计算时的舍入误差
+
     # 获取用户选择的ODE函数
     f = get_ode_function()
 
@@ -305,12 +316,6 @@ def main():
         print("Invalid choice for W values. Please enter 'y' or 'n'.")
         return
 
-    # 获取最大的小数位数
-    max_decimal_places = 8
-
-    # 设置 Decimal 的精度
-    getcontext().prec = max_decimal_places + 7  # 增加一些额外的精度，以便计算时不会丢失精度
-
     # 求解 ODE
     try:
         # 如果用户选择有已知的 W 值，init_method 设为 None
@@ -330,9 +335,8 @@ def main():
     print("\nNumerical solution result:")
     print(f"{'t':<15} {'y(t)':<15}")
     for t, y in zip(t_values, y_values):
-        # 使用 round 保留指定小数位数
-        print(f"{t:<15.8f} {y:<15.8f}")
-
+        # 使用 round 保留指定有效数字位数
+        print(f"{t:<15.{significant_digits}f} {y:<15.{significant_digits}f}")
 
 if __name__ == "__main__":
     main()
